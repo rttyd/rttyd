@@ -1,0 +1,25 @@
+import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
+import { Terminal } from "xterm";
+
+const term = new Terminal({
+  fontFamily: '"DejaVu Sans Mono", "Everson Mono", FreeMono, Menlo, Terminal, monospace, "Apple Symbols"',
+});
+const fitAddon = new FitAddon();
+
+term.loadAddon(fitAddon);
+term.loadAddon(new ClipboardAddon());
+term.loadAddon(new WebLinksAddon());
+term.loadAddon(new WebglAddon());
+
+term.open(document.body);
+
+fitAddon.fit();
+
+window.addEventListener('resize', () => {
+  fitAddon.fit();
+});
+
+term.write('Hello from \x1B[1;3;31mRttyd\x1B[0m $ ')
