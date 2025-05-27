@@ -8,5 +8,18 @@ name = "rttyd"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = { workspace = true }
+futures-util = { workspace = true }
+pty-process = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
 rtty = { path = "../rtty" }
+
+axum = { version = "0.8.4", features = ["ws"] }
+base64 = "0.22.1"
+headers = "0.4.0"
+http-body = "1.0.1"
+mime_guess = "2.0.5"
+rust-embed = { version = "8.7.2", features = ["debug-embed"] }

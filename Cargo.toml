@@ -6,4 +6,16 @@ members = [
 ]
 
 [workspace.dependencies]
-anyhow = "1.0.98"
+async-stream = "0.3.6"
+bytes = "1.10.1"
+futures-util = { version = "0.3.31", default-features = false, features = [
+  "sink",
+  "std",
+] }
+pty-process = { version = "0.5.1", features = ["async"] }
+tokio = { version = "1.45.1", features = ["full"] }
+tokio-stream = "0.1.17"
+tokio-util = { version = "0.7.15", features = ["io"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+thiserror = "2.0.12"

@@ -1,6 +1,3 @@
-use anyhow::Result;
+mod command;
 
-pub fn lib_main() -> Result<()> {
-    println!("Hello, rtty!");
-    Ok(())
-}
+pub use command::*;
