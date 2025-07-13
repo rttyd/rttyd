@@ -19,7 +19,11 @@ rtty = { path = "../rtty" }
 
 axum = { version = "0.8.4", features = ["ws"] }
 base64 = "0.22.1"
-headers = "0.4.0"
+clap = { version = "4.5.41", features = ["cargo", "derive"] }
+headers = "0.4.1"
 http-body = "1.0.1"
 mime_guess = "2.0.5"
 rust-embed = { version = "8.7.2", features = ["debug-embed"] }
+
+[target.'cfg(not(any(target_os = "macos", target_os="windows", target_arch = "arm")))'.dependencies]
+tikv-jemallocator = "0.6.0"

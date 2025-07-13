@@ -12,10 +12,16 @@ futures-util = { version = "0.3.31", default-features = false, features = [
   "sink",
   "std",
 ] }
-pty-process = { version = "0.5.1", features = ["async"] }
-tokio = { version = "1.45.1", features = ["full"] }
+pty-process = { version = "0.5.3", features = ["async"] }
+tokio = { version = "1.46.1", features = ["full"] }
 tokio-stream = "0.1.17"
 tokio-util = { version = "0.7.15", features = ["io"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 thiserror = "2.0.12"
+
+[workspace.metadata.cross.target.x86_64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main-centos"
+
+[workspace.metadata.cross.target.aarch64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main-centos"

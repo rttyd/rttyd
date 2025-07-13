@@ -1,0 +1,29 @@
+name: Continuous Integration (CI)
+on: [push]
+
+concurrency:
+  group: "ci-${{ github.ref_name }}"
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Build Web
+        run: |
+          cd crates/rttyd/web
+          bun install
+          bun dist
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo test
+        run: |
+          cargo fmt --check
+          cargo test --workspace

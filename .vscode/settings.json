@@ -1,8 +1,15 @@
 {
   "cSpell.words": [
+    "binstall",
+    "jemalloc",
+    "jemallocator",
     "rtty",
     "rttyd",
+    "rustup",
+    "Swatinem",
     "thiserror",
+    "tikv",
+    "tlsv",
     "trzsz",
     "webgl"
   ]

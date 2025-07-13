@@ -1,0 +1,67 @@
+name: Create and publish prebuilt binary
+
+on:
+  workflow_dispatch:
+    inputs:
+      rev:
+        description: "branch or tag or commit to build"
+        required: true
+        default: "main"
+      version:
+        description: "version number"
+        required: true
+        default: "v0.0.0"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - target: x86_64-unknown-linux-gnu
+            name: amd64
+          - target: aarch64-unknown-linux-gnu
+            name: aarch64
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.rev }}
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install Rust with Cross
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
+          rustup toolchain install stable --profile minimal
+          rustup target add ${{ matrix.arch.target }}
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm cross
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.arch.target }}
+          cache-on-failure: true
+      - name: Build Web
+        run: |
+          cd crates/rttyd/web
+          bun install
+          bun dist
+      - name: Build Binary
+        run: |
+          cross build --verbose --locked --release --target ${{ matrix.arch.target }}
+          mv target/${{ matrix.arch.target }}/release/rttyd target/${{ matrix.arch.target }}/release/rttyd-${{ matrix.arch.name }}
+      - name: Publish to GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view ${{ github.event.inputs.version }} || gh release create ${{ github.event.inputs.version }} -t ${{ github.event.inputs.version }} --target $(git rev-parse HEAD) --draft
+          gh release delete-asset ${{ github.event.inputs.version }} rttyd-${{ matrix.arch.name }} -y || true
+          gh release upload ${{ github.event.inputs.version }} target/${{ matrix.arch.target }}/release/rttyd-${{ matrix.arch.name }}
+          if [ "${{ github.event.inputs.version }}" != "v0.0.0" ]; then
+            gh release edit ${{ github.event.inputs.version }} --draft=false --latest
+          fi

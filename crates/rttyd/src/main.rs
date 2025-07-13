@@ -5,36 +5,86 @@ use axum::extract::ws::Message;
 use axum::http::{Response, StatusCode, Uri, header};
 use axum::{Router, extract::WebSocketUpgrade, response::IntoResponse, routing::get};
 use base64::Engine;
+use clap::{Parser, command, value_parser};
 use futures_util::{SinkExt, StreamExt};
 use pty_process::Command;
 use rtty::{CommandInputItem, CommandOutputItem, start_command};
 use rust_embed::Embed;
 use tokio::net::TcpListener;
 use tokio::sync::Notify;
-use tracing::{info, warn};
+use tracing::{Level, info, warn};
+
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_arch = "arm")))]
+use tikv_jemallocator::Jemalloc;
+
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_arch = "arm")))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None, long_version = env!("PKG_LONG_VERSION"))]
+pub struct RttydArgs {
+    #[arg(
+      short = 'v', long,
+      value_parser = ["trace", "debug", "info", "warn", "error"],
+      default_value = "info"
+    )]
+    pub verbosity: String,
+
+    #[arg(long, short = 'H', default_value = "127.0.0.1")]
+    pub host: String,
+
+    #[arg(long, short = 'p', value_parser = value_parser!(u16), default_value = "28888")]
+    pub port: u16,
+
+    pub command: String,
+}
 
 #[tokio::main]
 async fn main() {
     // initialize tracing
-    tracing_subscriber::fmt::init();
+    let args = RttydArgs::parse();
+    let level = match args.verbosity.as_str() {
+        "trace" => Level::TRACE,
+        "debug" => Level::DEBUG,
+        "info" => Level::INFO,
+        "warn" => Level::WARN,
+        "error" => Level::ERROR,
+        _ => Level::INFO,
+    };
+    tracing_subscriber::fmt()
+        .with_max_level(level)
+        .with_ansi(false)
+        .init();
     // Build the Axum application
     let app = Router::new()
-        .route("/ws", get(move |ws: WebSocketUpgrade| handle_websocket(ws)))
+        .route(
+            "/ws",
+            get(move |ws: WebSocketUpgrade| handle_websocket(ws, args.command.clone())),
+        )
         .fallback(get(static_handler));
     // Start the server
-    let listener = TcpListener::bind("127.0.0.1:33080").await.unwrap();
-    println!("Listening on http://127.0.0.1:33080");
+    let listener = TcpListener::bind(format!("{}:{}", args.host, args.port))
+        .await
+        .unwrap();
+    println!("Listening on http://{}:{}", args.host, args.port);
     axum::serve(listener, app).await.unwrap();
 }
-async fn handle_websocket(ws: WebSocketUpgrade) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket))
+
+async fn handle_websocket(ws: WebSocketUpgrade, command: String) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_socket(socket, command))
 }
-async fn handle_socket(socket: axum::extract::ws::WebSocket) {
+
+async fn handle_socket(socket: axum::extract::ws::WebSocket, command: String) {
     let use_binary = true;
     let (mut tx, mut rx) = socket.split();
     let aborter = Arc::new(Notify::new());
-    let (mut command_tx, mut command_rx) =
-        start_command(Command::new("bash"), aborter.clone(), None).unwrap();
+    let (mut command_tx, mut command_rx) = start_command(
+        Command::new("sh").arg("-c").arg(command),
+        aborter.clone(),
+        None,
+    )
+    .unwrap();
     loop {
         tokio::select! {
             msg = rx.next() => {
